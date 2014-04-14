@@ -1,3 +1,6 @@
+include_recipe "build-essential"
+include_recipe "git::default"
+
 doxygen_options = node.to_hash['doxygen'].to_hash['options'].sort.find_all do |key, val|
   !val.nil? || val != false
 end.map do |key, val|
@@ -10,14 +13,11 @@ end.join " "
 
 git "/home/vagrant/doxygen" do
   repository "git://github.com/doxygen/doxygen.git"
-  user "vagrant"
-  checkout_branch node['doxygen']['version']
+  checkout_branch "Release_#{node['doxygen']['version'].gsub(/\.{1}/, '_')}"
   action :sync
-  notifies :run, "bash[config_doxygen]", :immediately
 end
 
 bash "config_doxygen" do
-  user "vagrant"
   cwd "/home/vagrant/doxygen"
   flags "-lx"
   code <<-EOH
@@ -31,16 +31,13 @@ bash "config_doxygen" do
     make
   EOH
   action :run
-  notifies :run, "bash[install_doxygen]", :immediately
-  only_if do node['doxygen']['force_recompile'] == true end
 end
 
 bash "install_doxygen" do
-  user "root"
   cwd "/home/vagrant/doxygen"
   flags "-lx"
   code <<-EOH
-    sudo make install
+    make install
   EOH
-  action :nothing
+  action :run
 end
